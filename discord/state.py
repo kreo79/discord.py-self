@@ -254,7 +254,7 @@ class MemberSidebar:
         finally:
             self.waiters.remove(future)
 
-    def get_future(self) -> asyncio.Future[List[Member]]:
+    def get_future(self) -> asyncio.Future[Optional[List[Member]]]:
         future = self.loop.create_future()
         self.waiters.append(future)
         return future
@@ -1421,7 +1421,7 @@ class ConnectionState:
         request = self._scrape_requests.get(guild.id)
 
         if (count := data['member_count']) > 0:
-            guild._member_count = data['member_count']
+            guild._member_count = count
         if (count := data['online_count']) > 0:
             guild._presence_count = count
         guild._true_online_count = sum(group['count'] for group in data['groups'] if group['id'] != 'offline')

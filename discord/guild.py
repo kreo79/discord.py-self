@@ -179,10 +179,6 @@ class Guild(Hashable):
         The maximum amount of presences for the guild.
     max_members: Optional[:class:`int`]
         The maximum amount of members for the guild.
-
-        .. note::
-
-            This attribute is only available via :meth:`.Client.fetch_guild`.
     max_video_channel_users: Optional[:class:`int`]
         The maximum amount of users in a video channel.
 
@@ -203,7 +199,7 @@ class Guild(Hashable):
         A list of features that the guild has. The features that a guild can have are
         subject to arbitrary change by Discord.
     premium_tier: :class:`int`
-        The premium tier for this guild. Corresponds to "Nitro Server" in the official UI.
+        The premium tier for this guild. Corresponds to "Server Boost Level" in the official UI.
         The number goes from 0 to 3 inclusive.
     premium_subscription_count: :class:`int`
         The number of "boosts" this guild currently has.
@@ -2899,7 +2895,7 @@ class Guild(Hashable):
         if payload:
             await self._state.http.edit_welcome_screen(self.id, payload)
 
-    async def chunk(self, channel: Snowflake = MISSING):
+    async def chunk(self, channel: Snowflake = MISSING) -> Optional[List[Member]]:
         """|coro|
 
         Requests all members that belong to this guild.
@@ -2920,7 +2916,8 @@ class Guild(Hashable):
         ClientException:
             This guild cannot be chunked.
         """
-        await self._state.chunk_guild(self, channels=[channel])
+        if not self._state.is_guild_evicted(self):
+            return await self._state.chunk_guild(self, channels=[channel])  # type: ignore
 
     async def fetch_members(
         self,
@@ -2963,7 +2960,8 @@ class Guild(Hashable):
         Optional[List[:class:`Member`]]
             The members that belong to this guild. If the result is ``None``, chunking failed.
         """
-        return await self._state.scrape_guild(self, cache=cache, force_scraping=force_scraping, delay=delay, channels=channels)  # type: ignore
+        if not self._state.is_guild_evicted(self):
+            return await self._state.scrape_guild(self, cache=cache, force_scraping=force_scraping, delay=delay, channels=channels)  # type: ignore
 
     async def query_members(
         self,
