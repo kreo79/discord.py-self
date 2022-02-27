@@ -48,7 +48,7 @@ from . import utils, abc
 from .role import Role
 from .member import Member, VoiceState
 from .emoji import Emoji
-from .errors import InvalidData
+from .errors import ClientException, InvalidData
 from .permissions import PermissionOverwrite
 from .colour import Colour
 from .errors import InvalidArgument
@@ -2895,7 +2895,7 @@ class Guild(Hashable):
         if payload:
             await self._state.http.edit_welcome_screen(self.id, payload)
 
-    async def chunk(self, channel: Snowflake = MISSING) -> Optional[List[Member]]:
+    async def chunk(self, channel: Snowflake = MISSING) -> List[Member]:
         """|coro|
 
         Requests all members that belong to this guild.
@@ -2914,10 +2914,23 @@ class Guild(Hashable):
         Raises
         -------
         ClientException:
-            This guild cannot be chunked.
+            This guild cannot be chunked or chunking failed.
+            Guild is no longer available.
+
+        Returns
+        --------
+        List[:class:`Member`]
+            The members that belong to this guild.
         """
-        if not self._state.is_guild_evicted(self):
-            return await self._state.chunk_guild(self, channels=[channel])  # type: ignore
+        if self._offline_members_hidden:
+            raise ClientException('This guild cannot be chunked.')
+        if self._state.is_guild_evicted(self):
+            raise ClientException('This guild is no longer available.')
+
+        members = await self._state.chunk_guild(self, channels=[channel])
+        if members is None:
+            raise ClientException('Chunking failed.')
+        return members  # type: ignore
 
     async def fetch_members(
         self,
@@ -2926,7 +2939,7 @@ class Guild(Hashable):
         cache: bool = True,
         force_scraping: bool = False,
         delay: Union[int, float] = 1,
-    ) -> Optional[List[Member]]:
+    ) -> List[Member]:
         """|coro|
 
         Retrieves all members that belong to this guild.
@@ -2955,13 +2968,24 @@ class Guild(Hashable):
             The time in seconds to wait between requests.
             This only applies when scraping from the member sidebar.
 
+        Raises
+        -------
+        ClientException
+            Fetching members failed.
+            Guild is no longer available.
+
         Returns
         --------
-        Optional[List[:class:`Member`]]
-            The members that belong to this guild. If the result is ``None``, chunking failed.
+        List[:class:`Member`]
+            The members that belong to this guild (offline members may not be included).
         """
-        if not self._state.is_guild_evicted(self):
-            return await self._state.scrape_guild(self, cache=cache, force_scraping=force_scraping, delay=delay, channels=channels)  # type: ignore
+        if self._state.is_guild_evicted(self):
+            raise ClientException('This guild is no longer available.')
+
+        members = await self._state.scrape_guild(self, cache=cache, force_scraping=force_scraping, delay=delay, channels=channels)
+        if members is None:
+            raise ClientException('Fetching members failed.')
+        return members  # type: ignore
 
     async def query_members(
         self,

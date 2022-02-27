@@ -190,8 +190,6 @@ class MemberSidebar:
             max = min + end
             ranges.append((min, max))
 
-        if not ranges:
-            raise RuntimeError('Could not fetch ranges')
         return ranges
 
     def get_current_ranges(self) -> List[Tuple[int, int]]:
@@ -298,7 +296,7 @@ class MemberSidebar:
                 requests[channel] = ranges
 
             if not requests:
-                raise RuntimeError('Unable to get channels')
+                raise RuntimeError('Unable to get channels or ranges')
 
             def predicate(data):
                 if int(data['guild_id']) != guild.id:
