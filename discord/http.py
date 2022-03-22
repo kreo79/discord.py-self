@@ -1234,9 +1234,10 @@ class HTTPClient:
         }
         return self.request(Route('POST', '/report'), json=payload)
     
-    def interact(self, payload, *, form_data=False) -> Response[None]:
+    def interact(self, payload, *, form_data=False):
         if form_data:
             form = [{'name': 'payload_json', 'value': utils._to_json(payload)}]
             return self.request(Route('POST', '/interactions'), form=form)
         else:
             return self.request(Route('POST', '/interactions'), json=payload)
+
